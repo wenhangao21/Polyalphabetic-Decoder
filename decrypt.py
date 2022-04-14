@@ -1,7 +1,7 @@
-from collections import Counter
 from tabulate import tabulate
 import six
 import random
+import itertools
 
 
 class vigenere_decryption:
@@ -9,7 +9,7 @@ class vigenere_decryption:
         self.alpha = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
     def find_all(self, str_, char):
-        # input string all upper case, and a character(upper case letter), returns a list of indices such that msg[index] =
+        # input string all upper case, and a character(upper case letter), returns a list of indices such that msg[index] = char
         num = str_.find(char)
         num_list = [num]
         while num != -1:
@@ -75,6 +75,34 @@ class vigenere_decryption:
             nums = list(map(list, six.moves.zip_longest(*nums)))
             print("\n" + tabulate(nums, headers=self.alpha, tablefmt="github"))
 
+    def get_guess_shifts(self, freqs, txt_len, n):
+        n_strips = len(freqs)
+        reward_threshold = txt_len / 1000
+
+        def get_difference(k):
+            s_diff = 0
+            reward = 0
+            for j in range(26):
+                n1 = freqs[0][j]
+                n2 = freqs[1][(j + k[0]) % 26]
+                n3 = freqs[2][(j + k[1]) % 26]
+                n4 = freqs[3][(j + k[2]) % 26]
+                n_list = [n1, n2, n3, n4]
+                if n_strips == 5:
+                    n_list.append(freqs[4][(j + k[3]) % 26])
+                mu = sum(n_list) / n_strips
+                if mu < reward_threshold:
+                    reward += 1
+                else:
+                    diff = sum(abs(n_i - mu) for n_i in n_list) / mu
+                    s_diff += diff
+            return s_diff * 0.9 ** reward
+
+        alpha = [i for i in range(26)]
+        guess_keys = list(itertools.product(alpha, repeat=n_strips - 1))
+        guess_keys = sorted(guess_keys, key=lambda k: get_difference(k))
+        return guess_keys[: n]
+
     def vigenere_decrypt(self, t, key, sec_len):
         # input t: ciphertext(upper case), key: keyword, sec_len: keyword length
         t_list = list(t)
@@ -96,7 +124,7 @@ class mono_decryption:
         self.alpha = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
     def find_all(self, str_, char):
-        # input string all upper case, and a character(letter), returns a list of indices such that msg[index] =
+        # input string all upper case, and a character(letter), returns a list of indices such that msg[index] = char
         num = str_.find(char)
         num_list = [num]
         while num != -1:
@@ -153,27 +181,26 @@ class mono_decryption:
             ciphertext = ciphertext.replace(key[i], plain)
         return ciphertext.upper()
 
-    def get_cost(self, text, freq_dict):
-        # input text: string all upper case, return cost of the input text
-        # cost is the reciprocal of the sum of relative frequencies of all trigrams in the text
+    def get_rating(self, text, freq_dict):
+        # input text: string all upper case, return rating of the input text
+        # rating is the reciprocal of the sum of relative frequencies of all trigrams in the text
         s = 0
         for i in range(len(text) - 2):
             trigram = text[i:i+3]
             if trigram in freq_dict:
                 s += freq_dict[trigram]
-        return -s
+        return s
 
-    def get_key(self, ciphertext, init_trials, swap_trials):
+    def get_key(self, ciphertext, init_trials, swap_trials, freq_dict):
         # input ciphertext all upper case
         # init_trials: number of initial shuffle trials
         # swap_trials: number of swaps of 2 letters in the key, hope to get better key
         alphabet = self.alpha
-        lowest_cost = 1000
-        freq_dict = self.get_frequency_dictionary()
-        for trail_number in range(1, init_trials):  # loop through 1 to 49
+        best_rating = 0
+        for trail_number in range(1, init_trials):  
             key = alphabet.copy()
             random.shuffle(key)
-            cost = self.get_cost(self.cipher_to_plain_with_key(ciphertext, key), freq_dict)
+            rating = self.get_rating(self.cipher_to_plain_with_key(ciphertext, key), freq_dict)
             j = 0
             while j < swap_trials:
                 # perform random swaps on key
@@ -182,18 +209,19 @@ class mono_decryption:
                     rand2 = random.randint(0, 25)
                 new_key = key.copy()
                 new_key[rand1], new_key[rand2] = key[rand2], key[rand1]
-                new_cost = self.get_cost(self.cipher_to_plain_with_key(ciphertext, new_key), freq_dict)
-                if new_cost < cost:  # update if we get better key
-                    cost = new_cost
+                new_rating = self.get_rating(self.cipher_to_plain_with_key(ciphertext, new_key), freq_dict)
+                if new_rating > rating:  # update if we get better key
+                    rating = new_rating
                     key = new_key
                     j = 0
                 else:
                     j += 1   # if not getting any better key after 5000 trials, return the best
-            if cost < lowest_cost:  # get the best key in 50 initial shuffle trials
+            if rating > best_rating:  # get the best key in 50 initial shuffle trials
                 best_key = key
-                lowest_cost = cost
-            # print(F"Trial number {trail_number:2}: {key} with cost: {cost}")
-        return best_key
+                best_rating = rating
+            # print(F"Trial number {trail_number:2}: {key} with rating: {rating}")
+        return best_key, best_rating
+
 
 
 
