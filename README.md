@@ -23,7 +23,7 @@ This decryption is the final project for Graph Theory course at Stony Brook.
 However, in the course, it is not required to write a computer program, and this may be the first computer program that attempts to decode automatically.
 
 # Alternatives
-Alternatives, one can do it without any code. Decryption by hand is feasible but, of course, time consuming; it probably will take around the same amount of time, if not more, to do everything solely by hand as to write this program, but programs are reusable. Once it is coded up, in just a few minutes, it can decrypt all different cipher-texts for all students in the class.  
+Alternatives, one can do it without any code. Decryption by hand is feasible but, of course, time consuming; it probably will take around the same amount of time, if not more, to do everything solely by hand as to write this program, but programs are reusable. Once it is coded up, in just a few minutes, it can decrypt hundreds of different cipher-texts in a short time.
 
 # Contact
 Email wenhanjob(at symbol)gmail(dot symbol)com if you have any suggestions or questions regarding this program.
